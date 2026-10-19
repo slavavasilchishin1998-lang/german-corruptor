@@ -1,1 +1,1 @@
-
+print("German Corruptor initialized.")
