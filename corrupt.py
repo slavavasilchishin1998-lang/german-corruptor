@@ -1,4 +1,3 @@
-
 import random
 import re
 import sys
@@ -293,7 +292,6 @@ def main():
 
     finally:
         print("\nThanks for using GERMAN DESTROYER V3.")
-
 
 if __name__ == "__main__":
     main()
