@@ -1,92 +1,110 @@
+
 import random
 import re
-import argparse
+import sys
 import time
 
-# =====================================
-# GERMAN CORRUPTOR V2
-# =====================================
+# ==========================================
+#       GERMAN DESTROYER V3
+#          TOTAL ALEMAN CHAOS
+# ==========================================
+
+VERSION = "3.0"
 
 ARTICLES = [
     "der", "die", "das", "den", "dem", "des",
     "ein", "eine", "einen", "einem", "einer",
-    "eines", "einer"
+    "eines"
 ]
 
-GERMAN_WORDS = [
-    "Haus", "Hund", "Katze", "Mensch", "Schule",
-    "Auto", "Wasser", "Brot", "Freund", "Sprache",
-    "Deutschland", "Computer", "Buch", "Baum"
-]
+UMLAUTS = {
+    "ä": ["ae", "a", "e"],
+    "ö": ["oe", "o", "e"],
+    "ü": ["ue", "u", "i"],
+    "ß": ["ss", "s", "z"]
+}
 
+LETTERS = "abcdefghijklmnopqrstuvwxyzäöüß"
 VOWELS = "aeiouäöü"
-CONSONANTS = "bcdfghjklmnpqrstvwxyz"
 
-def random_letter():
-    return random.choice("abcdefghijklmnopqrstuvwxyzäöüß")
+
+def banner():
+    print("\033[96m")
+    print("=" * 48)
+    print("          GERMAN DESTROYER V3")
+    print("            ALEMAN CHAOS")
+    print("=" * 48)
+    print("\033[0m")
 
 
 def destroy_umlauts(word):
-    replacements = {
-        "ä": random.choice(["ae", "a", "e"]),
-        "ö": random.choice(["oe", "o", "e"]),
-        "ü": random.choice(["ue", "u", "i"]),
-        "ß": random.choice(["ss", "s", "z"])
-    }
+    result = ""
 
-    for old, new in replacements.items():
-        if old in word.lower():
-            word = re.sub(
-                old,
-                new,
-                word,
-                flags=re.IGNORECASE
-            )
+    for char in word:
+        lower = char.lower()
 
-    return word
+        if lower in UMLAUTS and random.random() < 0.8:
+            replacement = random.choice(UMLAUTS[lower])
+
+            if char.isupper():
+                replacement = replacement.upper()
+
+            result += replacement
+        else:
+            result += char
+
+    return result
 
 
-def destroy_word(word, chaos):
+def mutate_word(word, chaos):
     if len(word) < 2:
         return word
 
     if random.randint(1, 100) > chaos:
         return word
 
-    operation = random.choice([
-        "shuffle",
+    operations = [
         "replace",
         "duplicate",
+        "shuffle",
         "reverse",
-        "remove",
-        "umlaut"
-    ])
+        "delete",
+        "umlaut",
+        "extra"
+    ]
 
+    operation = random.choice(operations)
     chars = list(word)
 
-    if operation == "shuffle" and len(chars) > 3:
-        middle = chars[1:-1]
-        random.shuffle(middle)
-        chars = [chars[0]] + middle + [chars[-1]]
-
-    elif operation == "replace":
+    if operation == "replace":
         i = random.randrange(len(chars))
-        chars[i] = random_letter()
+        chars[i] = random.choice(LETTERS)
 
     elif operation == "duplicate":
         i = random.randrange(len(chars))
         chars.insert(i, chars[i])
 
+    elif operation == "shuffle":
+        random.shuffle(chars)
+
     elif operation == "reverse":
         chars.reverse()
 
-    elif operation == "remove" and len(chars) > 2:
+    elif operation == "delete" and len(chars) > 2:
         del chars[random.randrange(len(chars))]
 
     elif operation == "umlaut":
         return destroy_umlauts(word)
 
-    return "".join(chars)
+    elif operation == "extra":
+        chars.insert(
+            random.randrange(len(chars) + 1),
+            random.choice(LETTERS)
+        )
+
+    result = "".join(chars)
+
+    return result
 
 
 def destroy_article(word, chaos):
@@ -104,17 +122,7 @@ def destroy_article(word, chaos):
     return word
 
 
-def destroy_sentence(text):
-    words = text.split()
-
-    if len(words) > 2:
-        random.shuffle(words)
-
-    return " ".join(words)
-
-
-def corrupt(text, chaos):
-    # Protect punctuation and whitespace
+def corrupt_words(text, chaos):
     tokens = re.findall(r'\w+|[^\w\s]+|\s+', text)
 
     result = []
@@ -122,94 +130,169 @@ def corrupt(text, chaos):
     for token in tokens:
         if token.isalpha():
             token = destroy_article(token, chaos)
-            token = destroy_word(token, chaos)
+            token = mutate_word(token, chaos)
 
         result.append(token)
 
-    output = "".join(result)
-
-    if chaos >= 75:
-        sentences = re.split(r'(?<=[.!?])\s+', output)
-        random.shuffle(sentences)
-        output = " ".join(sentences)
-
-    return output
+    return "".join(result)
 
 
-def nuclear_mode(text):
+def scramble_sentence(text):
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+
+    result = []
+
+    for sentence in sentences:
+        words = sentence.split()
+
+        if len(words) > 2:
+            random.shuffle(words)
+
+        result.append(" ".join(words))
+
+    return " ".join(result)
+
+
+def nuclear_destroy(text):
     result = text
 
-    for _ in range(3):
-        result = corrupt(result, 100)
+    for _ in range(5):
+        result = corrupt_words(result, 100)
+
+    result = scramble_sentence(result)
 
     return result
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="GERMAN CORRUPTOR - ALEMAN DESTROYER"
-    )
+def destroy(text, chaos):
+    result = corrupt_words(text, chaos)
 
-    parser.add_argument(
-        "text",
-        nargs="?",
-        help="German text to corrupt"
-    )
+    if chaos >= 40:
+        result = scramble_sentence(result)
 
-    parser.add_argument(
-        "--chaos",
-        type=int,
-        default=100,
-        help="Corruption level (0-100)"
-    )
+    return result
 
-    parser.add_argument(
-        "--nuclear",
-        action="store_true",
-        help="Maximum corruption"
-    )
 
-    parser.add_argument(
-        "--infinite",
-        action="store_true",
-        help="Generate corruption repeatedly"
-    )
+def print_result(original, corrupted):
+    print("\n" + "=" * 48)
+    print("ORIGINAL:")
+    print(original)
 
-    args = parser.parse_args()
+    print("\nDESTROYED:")
+    print("\033[91m" + corrupted + "\033[0m")
+    print("=" * 48)
 
-    print("=" * 45)
-    print("       GERMAN CORRUPTOR V2")
-    print("          ALEMAN DESTROYER")
-    print("=" * 45)
 
-    if not args.text:
-        args.text = input("\nEnter German text: ")
-
-    chaos = max(0, min(100, args.chaos))
-
-    print("\nORIGINAL:")
-    print(args.text)
-
-    if args.infinite:
-        print("\nINFINITE CHAOS - Press CTRL+C to stop")
+def get_chaos():
+    while True:
+        value = input("Chaos level (0-100): ").strip()
 
         try:
-            while True:
-                print("\n" + corrupt(args.text, chaos))
-                time.sleep(0.5)
+            number = int(value)
+
+            if 0 <= number <= 100:
+                return number
+
+            print("Enter a number between 0 and 100.")
+
+        except ValueError:
+            print("Please enter a valid number.")
+
+
+def interactive():
+    while True:
+        print("\n")
+        print("========= MAIN MENU =========")
+        print("1. Normal destruction")
+        print("2. Article destroyer")
+        print("3. Word destroyer")
+        print("4. Umlaut destroyer")
+        print("5. Grammar chaos")
+        print("6. NUCLEAR MODE")
+        print("7. INFINITE MODE")
+        print("8. Change chaos level")
+        print("9. Exit")
+        print("=============================")
+
+        choice = input("\nChoose mode: ").strip()
+
+        if choice == "9":
+            print("\nGERMAN DESTROYER shutting down.")
+            break
+
+        if choice == "8":
+            chaos = get_chaos()
+            print(f"Chaos level selected: {chaos}")
+            continue
+
+        if choice not in ["1", "2", "3", "4", "5", "6", "7"]:
+            print("Invalid choice. Try again.")
+            continue
+
+        text = input("\nEnter German text: ")
+
+        if not text.strip():
+            print("Empty text! Try again.")
+            continue
+
+        try:
+            if choice == "1":
+                chaos = get_chaos()
+                result = destroy(text, chaos)
+
+            elif choice == "2":
+                result = text
+                tokens = re.findall(r'\w+|[^\w\s]+|\s+', text)
+                result = "".join(
+                    destroy_article(t, 100) if t.isalpha() else t
+                    for t in tokens
+                )
+
+            elif choice == "3":
+                result = corrupt_words(text, 100)
+
+            elif choice == "4":
+                result = destroy_umlauts(text)
+
+            elif choice == "5":
+                result = scramble_sentence(text)
+
+            elif choice == "6":
+                result = nuclear_destroy(text)
+
+            elif choice == "7":
+                print("\nINFINITE MODE")
+                print("Press CTRL+C to stop.")
+
+                while True:
+                    print("\n" + nuclear_destroy(text))
+                    time.sleep(0.7)
+
+                continue
+
+            print_result(text, result)
 
         except KeyboardInterrupt:
-            print("\n\nChaos stopped!")
+            print("\nOperation stopped.")
+        except Exception as error:
+            print(f"\nSomething went wrong: {error}")
 
-    elif args.nuclear:
-        print("\nNUCLEAR RESULT:")
-        print(nuclear_mode(args.text))
+        input("\nPress ENTER to return to menu...")
 
-    else:
-        print("\nCORRUPTED RESULT:")
-        print(corrupt(args.text, chaos))
 
-    print("\nGERMAN CORRUPTOR FINISHED.")
+def main():
+    try:
+        banner()
+        interactive()
+
+    except KeyboardInterrupt:
+        print("\n\nProgram stopped safely.")
+
+    except Exception as error:
+        print(f"\nUnexpected error: {error}")
+
+    finally:
+        print("\nThanks for using GERMAN DESTROYER V3.")
 
 
 if __name__ == "__main__":
